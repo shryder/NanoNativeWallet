@@ -17,7 +17,6 @@
 
 #include <filesystem>
 
-
 std::string base32_characters = "13456789abcdefghijkmnopqrstuwxyz";
 uint128_t const raw_ratio = uint128_t("1000000000000000000000000000000");
 

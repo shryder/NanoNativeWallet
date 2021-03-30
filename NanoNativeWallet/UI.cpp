@@ -170,7 +170,7 @@ void WalletPage() {
                 ImGui::BeginGroup();
                 // Accounts List
                 {
-                    ImGui::BeginChild("AccountsList", ImVec2(800, 0), true);
+                    ImGui::BeginChild("AccountsList", ImVec2(600, 0), true);
 
                     static ImGuiTextFilter filter;
                     filter.Draw("##AccountsListFilterAddresses", 800);
@@ -195,7 +195,7 @@ void WalletPage() {
                 ImGui::SameLine();
 
                 {
-                    ImGui::BeginChild("AccountInfo", ImVec2(350, 0), true);
+                    ImGui::BeginChild("AccountInfo", ImVec2(550, 0), true);
 
                     auto account = getAccount(selectedAccount);
 
@@ -208,12 +208,24 @@ void WalletPage() {
                     ImGui::Text("Recent Transactions:");
 
                     if (account.isAccountOpen) {
-                        ImGui::Columns(4, "RecentTransactions");
+                        ImGui::Columns(4, (std::string("RecentTransactions##") + std::to_string(account.index)).c_str());
+                        
                         ImGui::Separator();
+
                         ImGui::Text("Type"); ImGui::NextColumn();
                         ImGui::Text("Account"); ImGui::NextColumn();
                         ImGui::Text("Amount"); ImGui::NextColumn();
                         ImGui::Text("Hash"); ImGui::NextColumn();
+
+                        // A hack because ImGui's columns api is broke rn
+                        static bool resizedColumns = false;
+                        if (!resizedColumns) {
+                            ImGui::SetColumnWidth(0, 65);
+                            ImGui::SetColumnWidth(1, 200);
+                            ImGui::SetColumnWidth(2, 95);
+                            resizedColumns = true;
+                        }
+
                         ImGui::Separator();
 
                         static int selected = -1;

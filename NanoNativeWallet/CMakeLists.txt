@@ -10,9 +10,9 @@ find_package(nlohmann_json CONFIG REQUIRED)
 find_package(Boost REQUIRED)
 find_package(OpenSSL REQUIRED)
 find_package(unofficial-curlpp CONFIG REQUIRED)
-find_package(SDL2 REQUIRED)
 
-# OpenGL
+# Rendering
+find_package(SDL2 REQUIRED)
 find_package(GLEW REQUIRED)
 find_package(glfw3 CONFIG REQUIRED)
 
@@ -25,9 +25,8 @@ set(CMAKE_CXX_STANDARD 17)
 # Define executable
 file(GLOB_RECURSE SRC_FILES CONFIGURE_DEPENDS "*.h" "*.cpp" "*.c")
 add_executable(NanoNativeWallet ${SRC_FILES})
-target_compile_definitions(NanoNativeWallet PRIVATE -DED25519_CUSTOMHASH)
 
-target_link_libraries(NanoNativeWallet PRIVATE ${D3D11_LIBRARY} ${D3DX11_LIBRARY})
+target_compile_definitions(NanoNativeWallet PRIVATE -DED25519_CUSTOMHASH)
 
 target_link_libraries(NanoNativeWallet PRIVATE CURL::libcurl)
 target_link_libraries(NanoNativeWallet PRIVATE cryptopp-static)

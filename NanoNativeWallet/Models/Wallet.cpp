@@ -56,7 +56,7 @@ void Wallet::lock() {
 }
 
 void Wallet::loadAccounts() {
-    for (size_t i = 0; i < 10; i++) {
+    for (size_t i = 0; i < 5; i++) {
         addAccount(i);
     }
 }
