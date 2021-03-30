@@ -152,7 +152,7 @@ void WalletPage() {
             clear(walletPassword, MAX_WALLET_PASSWORD_LENGTH);
         }
     } else {
-        ImGui::Text("Accounts List - %s", getSelectedWallet().seed.c_str());
+        ImGui::Text("Accounts List");
 
         ImGui::SameLine(ImGui::GetWindowWidth() - 220);
         ImGui::SetNextItemWidth(80);
