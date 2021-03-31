@@ -10,12 +10,15 @@
 
 #define DB_FILE_NAME "db.json"
 
+#define MAGIC "POGU"
+#define MAGIC_SIZE 4
+
 #include <nlohmann/json.hpp>
 using nlohmann::json;
 
 json getLocalDatabase() {
     if (!std::filesystem::exists(DB_FILE_NAME)) {
-        return json::parse("{ \"wallets\": [] }");
+        return { { "wallets", {} } };
     }
 
     std::ifstream i(DB_FILE_NAME);
@@ -28,25 +31,18 @@ json getLocalDatabase() {
 void saveSeed(size_t id, std::vector<byte> encryptedData, std::vector<byte> iv) {
     std::ofstream o(std::to_string(id) + ".key", std::ios::binary);
 
-    std::vector<byte> fileContent = {};
-    for (size_t i = 0; i < iv.size(); i++) {
-        fileContent.push_back(iv[i]);
-    }
+    o.write((const char*) MAGIC, 4);
+    o.write((const char*) &iv[0], IV_SIZE);
+    o.write((const char*) &encryptedData[0], SEED_SIZE);
 
-    for (size_t i = 0; i < encryptedData.size(); i++) {
-        fileContent.push_back(encryptedData.at(i));
-    }
-
-    o.write(reinterpret_cast<char const*>(fileContent.data()), fileContent.size());
     o.close();
 }
 
 void saveDatabase() {
     std::ofstream o(DB_FILE_NAME);
-    json j;
-
-    // Build the json and save
-    j["wallets"] = {};
+    json j = {
+        { "wallets", {} }
+    };
 
     for (std::vector<Wallet>::size_type i = 0; i != gWallets.size(); i++) {
         j["wallets"].push_back(gWallets[i].name);
@@ -59,22 +55,39 @@ void saveDatabase() {
 IVKeyPair loadWalletFromDisk(size_t id) {
     // File Format: 
     // [random_16b_iv][encrypted_seed_64b]
-
     std::ifstream is(std::to_string(id) + ".key", std::ios::binary);
-    char* file_content = new char[IV_SIZE + SEED_SIZE];
-    is.read(file_content, IV_SIZE + SEED_SIZE);
-
-    // read first 16 bytes
-    std::vector<byte> fileIV = {};
-    for (size_t i = 0; i < IV_SIZE; i++) {
-        fileIV.push_back(file_content[i]);
+    
+    if (is.fail()) {
+        throw "Failed to open file";
     }
 
-    // read the rest 64 bytes
-    std::vector<byte> fileEncryptedSeed = {};
-    for (size_t i = IV_SIZE; i < (IV_SIZE + SEED_SIZE); i++) {
-        fileEncryptedSeed.push_back(file_content[i]);
+    is.seekg(0, is.end);
+    long lSize = is.tellg();
+    is.seekg(0, is.beg);
+
+    if (lSize != (MAGIC_SIZE + IV_SIZE + SEED_SIZE)) {
+        throw "Invalid file provided";
     }
 
-    return IVKeyPair { fileIV, fileEncryptedSeed };
+    char* magic = new char[MAGIC_SIZE];
+    is.read(magic, MAGIC_SIZE);
+
+    if (strncmp(magic, MAGIC, MAGIC_SIZE) != 0) {
+        throw "Invalid file provided";
+    }
+
+    char* IV = new char[IV_SIZE];
+    is.read(IV, IV_SIZE);
+
+    char* seed = new char[SEED_SIZE];
+    is.read(seed, SEED_SIZE);
+
+    is.close();
+
+    IVKeyPair pair = { std::vector<byte>(IV, IV + IV_SIZE), std::vector<byte>(seed, seed + SEED_SIZE) };
+
+    delete[] IV;
+    delete[] seed;
+
+    return pair;
 }

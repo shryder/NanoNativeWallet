@@ -9,15 +9,18 @@ Wallet::Wallet(std::string walletName, std::vector<byte> walletEncryptedSeed, st
     name = walletName;
     encryptedSeed = walletEncryptedSeed;
     iv = IV;
+
     isEncrypted = true;
 }
 
 Wallet::Wallet(std::string walletName, std::vector<byte> walletEncryptedSeed, std::vector<byte> IV, std::string walletSeed) {
     name = walletName;
     encryptedSeed = walletEncryptedSeed;
+    seed = walletSeed;
     iv = IV;
 
-    unlock(walletSeed);
+    isEncrypted = false;
+    loadAccounts();
 }
 
 void Wallet::addAccount(size_t i) {
