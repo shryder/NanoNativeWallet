@@ -130,9 +130,7 @@ void SettingsTab() {
         if (strcmp(newWalletPassword, newWalletPasswordRetype) == 0) {
             getSelectedWallet().updatePassword(newWalletPassword);
             clear(newWalletPassword, MAX_WALLET_PASSWORD_LENGTH);
-        }
-        else {
-            // MessageBoxA(hwnd, "Passwords do not match", "Error", MB_ICONERROR);
+        } else {
             printf("ERROR: Password do not match");
         }
     }
