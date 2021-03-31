@@ -4,8 +4,10 @@
 #include <nlohmann/json.hpp>
 
 nlohmann::json getLocalDatabase();
+std::string generateUUID();
 
-void saveSeed(size_t id, std::vector<std::byte> encryptedData, std::vector<std::byte> iv);
+void saveWalletToDisk(std::string uuid, std::vector<byte> encryptedData, std::vector<byte> iv);
 void saveDatabase();
+void deleteWalletFromDisk (std::string uuid);
 
-IVKeyPair loadWalletFromDisk(size_t id);
+IVKeyPair loadWalletFromDisk(std::string uuid);

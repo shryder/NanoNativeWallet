@@ -17,6 +17,10 @@
 
 #include <filesystem>
 
+#include <boost/uuid/uuid.hpp>
+#include <boost/uuid/uuid_generators.hpp>
+#include <boost/uuid/uuid_io.hpp>
+
 std::string base32_characters = "13456789abcdefghijkmnopqrstuwxyz";
 uint128_t const raw_ratio = uint128_t("1000000000000000000000000000000");
 
@@ -76,6 +80,13 @@ std::string decryptAES(std::vector<byte> encryptedData, std::vector<byte> vIV, s
     return decrypted;
 }
 
+std::string generateUUID(){
+    std::stringstream ss;
+    ss << boost::uuids::random_generator()();
+
+    return ss.str();
+}
+
 std::vector<byte> generateIV() {
     CryptoPP::AutoSeededRandomPool rnd;
 
@@ -91,10 +102,10 @@ std::vector<byte> deriveSecretKey(std::string seed, size_t index) {
 
     BLAKE2b hash((unsigned int)32);
 
-    hash.Update((const byte*)bytes.data(), bytes.size());
-    hash.Update((const byte*)&index, 4);
+    hash.Update((const byte*) bytes.data(), bytes.size());
+    hash.Update((const byte*) &index, 4);
     digest.resize(hash.DigestSize());
-    hash.Final((byte*)&digest[0]);
+    hash.Final((byte*) &digest[0]);
 
     HexEncoder encoder(new FileSink(std::cout));
     VectorSource digesting(digest, true, new Redirector(encoder));
@@ -106,8 +117,7 @@ std::string encodeBase32(byte* bytes, size_t length) {
     int leftover = (length * 8) % 5;
     int offset = leftover == 0 ? 0 : 5 - leftover;
 
-    int value = 0;
-    int bits = 0;
+    int value = 0, bits = 0;
 
     std::string output = "";
 
@@ -139,7 +149,7 @@ std::string derivePublicAddressFromSecret(std::vector<byte> accountSecretKey) {
     HexEncoder encoder(new FileSink(std::cout));
     std::vector<byte> checksum;
 
-    BLAKE2b hash((unsigned int)5);
+    BLAKE2b hash((unsigned int) 5);
 
     hash.Update((const byte*)pubkey, 32);
     checksum.resize(hash.DigestSize());

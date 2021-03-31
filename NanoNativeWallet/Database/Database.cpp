@@ -10,15 +10,20 @@
 
 #define DB_FILE_NAME "db.json"
 
+#define FILE_EXTENSION ".key"
+
 #define MAGIC "POGU"
 #define MAGIC_SIZE 4
+
+#define FILE_VERSION 1
+#define FILE_VERSION_SIZE 1
 
 #include <nlohmann/json.hpp>
 using nlohmann::json;
 
 json getLocalDatabase() {
     if (!std::filesystem::exists(DB_FILE_NAME)) {
-        return { { "wallets", {} } };
+        return { { "wallets", json::array() } };
     }
 
     std::ifstream i(DB_FILE_NAME);
@@ -28,34 +33,48 @@ json getLocalDatabase() {
     return j;
 }
 
-void saveSeed(size_t id, std::vector<byte> encryptedData, std::vector<byte> iv) {
-    std::ofstream o(std::to_string(id) + ".key", std::ios::binary);
+void saveDatabase() {
+    std::ofstream o(DB_FILE_NAME);
+    json j = {
+        { "wallets", json::array() }
+    };
 
-    o.write((const char*) MAGIC, 4);
+    for (std::vector<Wallet>::size_type i = 0; i != gWallets.size(); i++) {
+        auto name = gWallets[i].name;
+        auto uuid = gWallets[i].uuid;
+
+        j["wallets"].push_back({
+            { "name", name },
+            { "uuid", uuid }
+        });
+
+        saveWalletToDisk(uuid, gWallets[i].encryptedSeed, gWallets[i].iv);
+    }
+
+    o << std::setw(4) << j << std::endl;
+}
+
+void saveWalletToDisk(std::string uuid, std::vector<byte> encryptedData, std::vector<byte> iv) {
+    std::ofstream o(uuid + FILE_EXTENSION, std::ios::binary);
+    char file_version[FILE_VERSION_SIZE] = { FILE_VERSION };
+
+    o.write((const char*) MAGIC, MAGIC_SIZE);
+    o.write(reinterpret_cast<const char *>(&file_version), FILE_VERSION_SIZE);
+
     o.write((const char*) &iv[0], IV_SIZE);
     o.write((const char*) &encryptedData[0], SEED_SIZE);
 
     o.close();
 }
 
-void saveDatabase() {
-    std::ofstream o(DB_FILE_NAME);
-    json j = {
-        { "wallets", {} }
-    };
-
-    for (std::vector<Wallet>::size_type i = 0; i != gWallets.size(); i++) {
-        j["wallets"].push_back(gWallets[i].name);
-        saveSeed(i, gWallets[i].encryptedSeed, gWallets[i].iv);
-    }
-
-    o << std::setw(4) << j << std::endl;
+void deleteWalletFromDisk (std::string uuid) {
+    std::filesystem::remove(std::string(uuid) + FILE_EXTENSION);
 }
 
-IVKeyPair loadWalletFromDisk(size_t id) {
+IVKeyPair loadWalletFromDisk(std::string uuid) {
     // File Format: 
     // [random_16b_iv][encrypted_seed_64b]
-    std::ifstream is(std::to_string(id) + ".key", std::ios::binary);
+    std::ifstream is(uuid + FILE_EXTENSION, std::ios::binary);
     
     if (is.fail()) {
         throw "Failed to open file";
@@ -65,7 +84,7 @@ IVKeyPair loadWalletFromDisk(size_t id) {
     long lSize = is.tellg();
     is.seekg(0, is.beg);
 
-    if (lSize != (MAGIC_SIZE + IV_SIZE + SEED_SIZE)) {
+    if (lSize != (MAGIC_SIZE + FILE_VERSION_SIZE + IV_SIZE + SEED_SIZE)) {
         throw "Invalid file provided";
     }
 
@@ -75,6 +94,9 @@ IVKeyPair loadWalletFromDisk(size_t id) {
     if (strncmp(magic, MAGIC, MAGIC_SIZE) != 0) {
         throw "Invalid file provided";
     }
+
+    char* fileVersion = new char[FILE_VERSION_SIZE];
+    is.read(fileVersion, FILE_VERSION_SIZE);
 
     char* IV = new char[IV_SIZE];
     is.read(IV, IV_SIZE);

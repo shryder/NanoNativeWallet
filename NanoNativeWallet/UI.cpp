@@ -83,8 +83,9 @@ void ImportWalletPage() {
     if (submitted || ImGui::Button("Submit")) {
         std::vector<byte> generatedIV = generateIV();
         std::string encryptedSeed = encryptAES(std::string(loginPopupSeed), std::string(loginPopupPassword), generatedIV);
+        std::string uuid = generateUUID();
 
-        addWallet(Wallet(std::string(loginPopupWalletAlias), std::vector<byte>(encryptedSeed.begin(), encryptedSeed.end()), generatedIV, std::string(loginPopupSeed)));
+        addWallet(Wallet(uuid, std::string(loginPopupWalletAlias), std::vector<byte>(encryptedSeed.begin(), encryptedSeed.end()), generatedIV, std::string(loginPopupSeed)));
         switchToWallet(gWallets.size() - 1);
 
         clear(loginPopupSeed, SEED_SIZE + 1);
@@ -100,6 +101,12 @@ void ImportWalletPage() {
 static char newWalletName[MAX_WALLET_NAME_LENGTH] = "";
 static char newWalletPassword[MAX_WALLET_PASSWORD_LENGTH] = "";
 static char newWalletPasswordRetype[MAX_WALLET_PASSWORD_LENGTH] = "";
+
+void deleteCurrentWallet(){
+    deleteWalletFromDisk(getSelectedWallet().uuid);
+    gWallets.erase(gWallets.begin() + selectedWallet);
+    saveDatabase();
+}
 
 void SettingsTab() {
     bool nameSubmitted = ImGui::InputTextWithHint("##newWalletName", "Enter new wallet name", newWalletName, MAX_WALLET_NAME_LENGTH, ImGuiInputTextFlags_EnterReturnsTrue);
@@ -134,6 +141,10 @@ void SettingsTab() {
 
     if (ImGui::Button("Lock Wallet")) {
         getSelectedWallet().lock();
+    }
+
+    if (ImGui::Button("Delete Wallet")) {
+        deleteCurrentWallet();
     }
 
 }

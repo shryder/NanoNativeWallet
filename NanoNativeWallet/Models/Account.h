@@ -19,7 +19,7 @@ public:
 	bool hidden = false; // Maybe this shouldn't be here but w/e for now
 	bool isAccountOpen = false;
 
-	Account(size_t index, std::string accountAddress, uint256_t accountBalance);
+	Account(size_t index, std::string accountAddress);
 
 	double getNANOBalance();
 	void SetBalance(uint256_t newBalance);

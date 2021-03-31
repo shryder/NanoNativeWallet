@@ -5,7 +5,8 @@
 
 #include "../Crypto/crypto_utils.h"
 
-Wallet::Wallet(std::string walletName, std::vector<byte> walletEncryptedSeed, std::vector<byte> IV) {
+Wallet::Wallet(std::string walletUuid, std::string walletName, std::vector<byte> walletEncryptedSeed, std::vector<byte> IV) {
+    uuid = walletUuid;
     name = walletName;
     encryptedSeed = walletEncryptedSeed;
     iv = IV;
@@ -13,7 +14,8 @@ Wallet::Wallet(std::string walletName, std::vector<byte> walletEncryptedSeed, st
     isEncrypted = true;
 }
 
-Wallet::Wallet(std::string walletName, std::vector<byte> walletEncryptedSeed, std::vector<byte> IV, std::string walletSeed) {
+Wallet::Wallet(std::string walletUuid, std::string walletName, std::vector<byte> walletEncryptedSeed, std::vector<byte> IV, std::string walletSeed) {
+    uuid = walletUuid;
     name = walletName;
     encryptedSeed = walletEncryptedSeed;
     seed = walletSeed;
@@ -24,20 +26,15 @@ Wallet::Wallet(std::string walletName, std::vector<byte> walletEncryptedSeed, st
 }
 
 void Wallet::addAccount(size_t i) {
-    bool found = false;
+    // Check if account already exists
     for (Account account : accounts) {
-        if (account.index == i) {
-            account.show();
-            found = true;
-        }
+        if (account.index == i) return;
     }
+       
+    auto accountSecret = deriveSecretKey(seed, i);
+    auto derivedPublicAddress = derivePublicAddressFromSecret(accountSecret);
 
-    if (!found) {
-        auto accountSecret = deriveSecretKey(seed, i);
-        auto derivedPublicAddress = derivePublicAddressFromSecret(accountSecret);
-
-        accounts.push_back(Account(i, derivedPublicAddress, 0));
-    }
+    accounts.push_back(Account(i, derivedPublicAddress));
 }
 
 void Wallet::addAccount() {

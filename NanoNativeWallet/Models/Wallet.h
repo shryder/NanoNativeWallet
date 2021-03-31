@@ -7,6 +7,7 @@
 
 class Wallet {
 public:
+    std::string uuid;
     std::string name;
     std::vector<byte> encryptedSeed;
     std::vector<byte> iv;
@@ -15,8 +16,8 @@ public:
     bool isEncrypted;
     std::vector<Account> accounts;
 
-    Wallet(std::string walletName, std::vector<byte> walletEncryptedSeed, std::vector<byte> IV);
-    Wallet(std::string walletName, std::vector<byte> walletEncryptedSeed, std::vector<byte> IV, std::string walletSeed);
+    Wallet(std::string walletUuid, std::string walletName, std::vector<byte> walletEncryptedSeed, std::vector<byte> IV);
+    Wallet(std::string walletUuid, std::string walletName, std::vector<byte> walletEncryptedSeed, std::vector<byte> IV, std::string walletSeed);
 
     void addAccount(size_t i);
     void addAccount();

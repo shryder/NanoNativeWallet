@@ -16,12 +16,13 @@ using nlohmann::json;
 void loadDatabase() {
     json database = getLocalDatabase();
 
-    for (std::vector<Wallet>::size_type i = 0; i != database["wallets"].size(); i++) {
-        auto walletName = database["wallets"].at(i);
-        IVKeyPair pair = loadWalletFromDisk(i);
+    for (const auto& wallet: database["wallets"].items()) {
+        auto name = wallet.value()["name"];
+        auto uuid = wallet.value()["uuid"];
 
-        Wallet wallet = Wallet(std::string(walletName), pair.key, pair.IV);
+        IVKeyPair pair = loadWalletFromDisk(uuid);
 
+        Wallet wallet = Wallet(uuid, name, pair.key, pair.IV);
         gWallets.push_back(wallet);
     }
 }

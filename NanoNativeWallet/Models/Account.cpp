@@ -2,7 +2,7 @@
 #include "../Crypto/crypto_utils.h"
 #include "../NodeRPC/NodeRPC.h"
 
-Account::Account(size_t i, std::string accountAddress, uint256_t accountBalance) {
+Account::Account(size_t i, std::string accountAddress) {
     address = accountAddress;
     index = i;
 
