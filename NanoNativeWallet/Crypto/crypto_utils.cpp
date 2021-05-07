@@ -22,8 +22,9 @@
 #include <boost/uuid/uuid_io.hpp>
 
 std::string base32_characters = "13456789abcdefghijkmnopqrstuwxyz";
-uint128_t const raw_ratio = uint128_t("1000000000000000000000000000000");
+uint256_t const raw_ratio = uint128_t("1000000000000000000000000000000");
 
+// TODO: fix this, currently not working properly
 uint256_t decode_dec(std::string const& text) {
     if (text.size() > 78 || (text.size() > 1 && text.front() == '0') || (!text.empty() && text.front() == '-')) {
         throw "Invalid value";
@@ -46,7 +47,11 @@ double rawToNano(uint256_t amount) {
     return (amount / raw_ratio).convert_to<double>();
 }
 
-std::string encryptAES(std::vector<byte> vMessage, std::vector<byte> vPassword, std::vector<byte> vIV) {
+std::string rawToNanoStr (uint256_t amount) {
+    return (amount / raw_ratio).convert_to<std::string>();
+}
+
+std::string encryptAES(const std::vector<byte>& vMessage, const std::vector<byte>& vPassword, const std::vector<byte>& vIV) {
     SecByteBlock key(AES::MAX_KEYLENGTH + AES::BLOCKSIZE);
     std::string encrypted;
 
@@ -61,11 +66,11 @@ std::string encryptAES(std::vector<byte> vMessage, std::vector<byte> vPassword, 
     return encrypted;
 }
 
-std::string encryptAES(std::string sMessage, std::string sPassword, std::vector<byte> vIV) {
+std::string encryptAES(const std::string& sMessage, const std::string& sPassword, const std::vector<byte>& vIV) {
     return encryptAES(std::vector<byte>(sMessage.begin(), sMessage.end()), std::vector<byte>(sPassword.begin(), sPassword.end()), vIV);
 }
 
-std::string decryptAES(std::vector<byte> encryptedData, std::vector<byte> vIV, std::string password) {
+std::string decryptAES(const std::vector<byte>& encryptedData, const std::vector<byte>& vIV, const std::string& password) {
     SecByteBlock key(AES::MAX_KEYLENGTH + AES::BLOCKSIZE);
 
     HKDF<SHA256> hkdf;
@@ -96,7 +101,7 @@ std::vector<byte> generateIV() {
     return std::vector<byte>(iv.begin(), iv.end());
 }
 
-std::vector<byte> deriveSecretKey(std::string seed, size_t index) {
+std::vector<byte> deriveSecretKey(const std::string& seed, size_t index) {
     std::vector<byte> bytes = HexToBytes(seed);
     std::vector<byte> digest;
 
@@ -104,7 +109,9 @@ std::vector<byte> deriveSecretKey(std::string seed, size_t index) {
 
     hash.Update((const byte*) bytes.data(), bytes.size());
     hash.Update((const byte*) &index, 4);
+
     digest.resize(hash.DigestSize());
+
     hash.Final((byte*) &digest[0]);
 
     HexEncoder encoder(new FileSink(std::cout));

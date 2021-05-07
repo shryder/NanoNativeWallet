@@ -12,17 +12,9 @@
 #include "Crypto/crypto_utils.h"
 #include "NodeRPC/NodeRPC.h"
 
-int MAIN_WINDOW_STYLE = ImGuiWindowFlags_NoTitleBar | ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoMove | ImGuiWindowFlags_NoCollapse | ImGuiWindowFlags_NoBringToFrontOnFocus;
+const int MAIN_WINDOW_STYLE = ImGuiWindowFlags_NoTitleBar | ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoMove | ImGuiWindowFlags_NoCollapse | ImGuiWindowFlags_NoBringToFrontOnFocus;
 
-static bool bDemoWindow = false;
-
-static char walletPassword[MAX_WALLET_PASSWORD_LENGTH] = "";
-static int accountIndexInput = 0;
-
-char loginPopupSeed[SEED_SIZE + 1] = "";
-char loginPopupPassword[MAX_WALLET_PASSWORD_LENGTH] = "";
-char loginPopupPasswordRetype[MAX_WALLET_PASSWORD_LENGTH] = "";
-char loginPopupWalletAlias[MAX_WALLET_NAME_LENGTH] = "";
+bool bDemoWindow = false;
 
 size_t selectedWallet = 0;
 size_t selectedAccount = 0;
@@ -65,6 +57,11 @@ void switchToWallet(size_t index) {
 }
 
 void ImportWalletPage() {
+    static char loginPopupSeed[SEED_SIZE + 1] = "";
+    static char loginPopupPassword[MAX_WALLET_PASSWORD_LENGTH] = "";
+    static char loginPopupPasswordRetype[MAX_WALLET_PASSWORD_LENGTH] = "";
+    static char loginPopupWalletAlias[MAX_WALLET_NAME_LENGTH] = "";
+
     ImGui::BeginGroup();
     ImGui::BeginChild("CreateNewWalletPage", ImVec2(0, 0));
 
@@ -98,10 +95,6 @@ void ImportWalletPage() {
     ImGui::EndGroup();
 }
 
-static char newWalletName[MAX_WALLET_NAME_LENGTH] = "";
-static char newWalletPassword[MAX_WALLET_PASSWORD_LENGTH] = "";
-static char newWalletPasswordRetype[MAX_WALLET_PASSWORD_LENGTH] = "";
-
 void deleteCurrentWallet(){
     deleteWalletFromDisk(getSelectedWallet().uuid);
     gWallets.erase(gWallets.begin() + selectedWallet);
@@ -109,6 +102,12 @@ void deleteCurrentWallet(){
 }
 
 void SettingsTab() {
+    static char newWalletName[MAX_WALLET_NAME_LENGTH] = "";
+
+    static char oldWalletPassword[MAX_WALLET_NAME_LENGTH] = "";
+    static char newWalletPassword[MAX_WALLET_PASSWORD_LENGTH] = "";
+    static char newWalletPasswordRetype[MAX_WALLET_PASSWORD_LENGTH] = "";
+
     bool nameSubmitted = ImGui::InputTextWithHint("##newWalletName", "Enter new wallet name", newWalletName, MAX_WALLET_NAME_LENGTH, ImGuiInputTextFlags_EnterReturnsTrue);
     ImGui::SameLine();
 
@@ -131,7 +130,7 @@ void SettingsTab() {
             getSelectedWallet().updatePassword(newWalletPassword);
             clear(newWalletPassword, MAX_WALLET_PASSWORD_LENGTH);
         } else {
-            printf("ERROR: Password do not match");
+            ImGui::TextColored(ImVec4(1.0f, 0.0f, 0.0f, 1.0f), "ERROR: Passwords do not match");
         }
     }
 
@@ -145,6 +144,9 @@ void SettingsTab() {
         deleteCurrentWallet();
     }
 
+    if (ImGui::Button("Copy Seed")) {
+        ImGui::SetClipboardText(getSelectedWallet().seed.c_str());
+    }
 }
 
 void WalletPage() {
@@ -155,12 +157,15 @@ void WalletPage() {
         ImGui::Text("Unlock Wallet - %s", getSelectedWallet().name.c_str());
         ImGui::Separator();
 
+        static char walletPassword[MAX_WALLET_PASSWORD_LENGTH] = "";
         bool submitted = ImGui::InputText("##WalletPagePassword", walletPassword, MAX_WALLET_PASSWORD_LENGTH, ImGuiInputTextFlags_EnterReturnsTrue);
         if (submitted || ImGui::Button("Unlock")) {
             getSelectedWallet().unlock(walletPassword);
             clear(walletPassword, MAX_WALLET_PASSWORD_LENGTH);
         }
     } else {
+        static int accountIndexInput = 0;
+
         ImGui::Text("Accounts List");
 
         ImGui::SameLine(ImGui::GetWindowWidth() - 220);
@@ -190,7 +195,8 @@ void WalletPage() {
                         Account account = getAccount(i);
 
                         if (!account.hidden) {
-                            std::string row_text = account.address + " - #" + std::to_string(account.index) + "\n" + std::to_string(account.getNANOBalance()) + std::string(" NANO") + "##" + std::to_string(account.index);
+                            std::string balance = std::to_string(account.getNANOBalance());
+                            std::string row_text = account.address + " - #" + std::to_string(account.index) + "\n" + balance + " NANO" + "##" + std::to_string(account.index);
 
                             if (filter.PassFilter(row_text.c_str()) && ImGui::Selectable(row_text.c_str(), selectedAccount == i)) {
                                 selectedAccount = i;
@@ -217,7 +223,10 @@ void WalletPage() {
                     ImGui::Text("Recent Transactions:");
 
                     if (account.isAccountOpen) {
-                        ImGui::Columns(4, (std::string("RecentTransactions##") + std::to_string(account.index)).c_str());
+                        std::string column_id = "RecentTransactions";
+                        column_id += "##" + std::to_string(account.index);
+
+                        ImGui::Columns(4, column_id.c_str());
                         
                         ImGui::Separator();
 
@@ -275,7 +284,7 @@ void WalletPage() {
                 ImGui::EndGroup();
             }
 
-            if (ImGui::BeginTabItem("Settings")) {
+            if (ImGui::BeginTabItem("Wallet Settings")) {
                 SettingsTab();
 
                 ImGui::EndTabItem();
@@ -351,7 +360,8 @@ void DrawUI() {
     ImGui::GetStyle().WindowRounding = 0.0f;
     ImGui::GetStyle().FrameRounding = 0.0f;
 
-    if (ImGui::IsKeyReleased(ImGui::GetIO().KeyShift)) {
+    // Press SPACE to toggle ImGui demo window
+    if (ImGui::IsKeyReleased(0x2C)) {
         bDemoWindow = !bDemoWindow;
     }
 

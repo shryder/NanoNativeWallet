@@ -10,6 +10,7 @@
 
 #include "NodeRPC.h"
 #include <nlohmann/json.hpp>
+
 using nlohmann::json;
 
 #define RPC_URL "https://node.shrynode.me/api"
