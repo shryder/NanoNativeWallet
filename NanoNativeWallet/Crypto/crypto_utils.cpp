@@ -22,33 +22,11 @@
 #include <boost/uuid/uuid_io.hpp>
 
 std::string base32_characters = "13456789abcdefghijkmnopqrstuwxyz";
-uint256_t const raw_ratio = uint128_t("1000000000000000000000000000000");
 
-// TODO: fix this, currently not working properly
-uint256_t decode_dec(std::string const& text) {
-    if (text.size() > 78 || (text.size() > 1 && text.front() == '0') || (!text.empty() && text.front() == '-')) {
-        throw "Invalid value";
-    }
-
-    std::stringstream stream(text);
-    stream << std::dec << std::noshowbase;
-
-    uint256_t number_l;
-    stream >> number_l;
-
-    if (!stream.eof()) {
-        throw "!Stream EOF";
-    }
-
-    return number_l;
-}
-
-double rawToNano(uint256_t amount) {
-    return (amount / raw_ratio).convert_to<double>();
-}
-
-std::string rawToNanoStr (uint256_t amount) {
-    return (amount / raw_ratio).convert_to<std::string>();
+nano::amount decode_raw_str(std::string const& text) {
+    nano::amount result(0);
+    result.decode_dec(text);
+    return result;
 }
 
 std::string encryptAES(const std::vector<byte>& vMessage, const std::vector<byte>& vPassword, const std::vector<byte>& vIV) {
@@ -101,14 +79,17 @@ std::vector<byte> generateIV() {
     return std::vector<byte>(iv.begin(), iv.end());
 }
 
-std::vector<byte> deriveSecretKey(const std::string& seed, size_t index) {
+std::vector<byte> deriveSecretKey(const std::string& seed, uint32_t index) {
     std::vector<byte> bytes = HexToBytes(seed);
     std::vector<byte> digest;
 
-    BLAKE2b hash((unsigned int)32);
+    BLAKE2b hash((unsigned int) 32);
 
-    hash.Update((const byte*) bytes.data(), bytes.size());
-    hash.Update((const byte*) &index, 4);
+    auto index_ptr = (const byte*) &index;
+    auto bytes_ptr = (const byte*) bytes.data();
+
+    hash.Update(bytes_ptr, bytes.size());
+    hash.Update(index_ptr, sizeof(uint32_t));
 
     digest.resize(hash.DigestSize());
 

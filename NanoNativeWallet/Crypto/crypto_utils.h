@@ -2,15 +2,14 @@
 
 #include <cryptopp/modes.h>
 #include <boost/multiprecision/cpp_int.hpp>
+#include "numbers.h"
+
 using namespace CryptoPP;
 
 using uint128_t = boost::multiprecision::uint128_t;
 using uint256_t = boost::multiprecision::uint256_t;
 
-std::string rawToNanoStr(uint256_t amount);
-
-double rawToNano(uint256_t amount);
-uint256_t decode_dec(std::string const& text);
+nano::amount decode_raw_str(std::string const& text);
 
 std::string encryptAES(const std::vector<byte>& vMessage, const std::vector<byte>& vPassword, const std::vector<byte>& vIV);
 std::string encryptAES(const std::string& sMessage, const std::string& sPassword, const std::vector<byte>& vIV);
@@ -22,7 +21,7 @@ std::vector<byte> generateIV();
 std::string encodeBase32(std::vector<byte> bytes);
 std::string derivePublicAddressFromSecret(std::vector<byte> secretKey);
 
-std::vector<byte> deriveSecretKey(const std::string& seed, size_t index);
+std::vector<byte> deriveSecretKey(const std::string& seed, uint32_t index);
 
 std::vector<byte> HexToBytes(const std::string& hex);
 std::string BytesToHex(std::vector<byte> bytes);

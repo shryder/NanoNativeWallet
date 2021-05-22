@@ -195,7 +195,7 @@ void WalletPage() {
                         Account account = getAccount(i);
 
                         if (!account.hidden) {
-                            std::string balance = std::to_string(account.getNANOBalance());
+                            std::string balance = account.getNANOBalance();
                             std::string row_text = account.address + " - #" + std::to_string(account.index) + "\n" + balance + " NANO" + "##" + std::to_string(account.index);
 
                             if (filter.PassFilter(row_text.c_str()) && ImGui::Selectable(row_text.c_str(), selectedAccount == i)) {
@@ -254,9 +254,9 @@ void WalletPage() {
                             std::string account = transaction["account"];
                             std::string hash = transaction["hash"];
                             std::string type = transaction["type"];
-
-                            float amount = rawToNano(decode_dec(transaction["amount"]));
-
+                            
+                            auto amount = decode_raw_str(transaction["amount"]).format_balance(raw_ratio, 6, true);
+                            
                             std::string label(type + "##" + std::to_string(i));
                             if (ImGui::Selectable(label.c_str(), selected == i, ImGuiSelectableFlags_SpanAllColumns))
                                 selected = i;
@@ -266,7 +266,7 @@ void WalletPage() {
                             ImGui::NextColumn();
                             ImGui::Text(account.c_str());
                             ImGui::NextColumn();
-                            ImGui::Text("%lf", amount);
+                            ImGui::Text(amount.c_str());
                             ImGui::NextColumn();
                             ImGui::Text(hash.c_str());
                             ImGui::NextColumn();
