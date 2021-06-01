@@ -15,7 +15,7 @@ using nlohmann::json;
 
 #define RPC_URL "https://node.shrynode.me/api"
 
-json GET(std::string url) {
+json GET(const std::string &url) {
     std::ostringstream response;
 
     try {
@@ -26,12 +26,10 @@ json GET(std::string url) {
         request.setOpt(new curlpp::options::Url(url.c_str()));
 
         request.perform();
-    }
-    catch (curlpp::LogicError& e) {
-        std::cout << e.what() << std::endl;
-    }
-    catch (curlpp::RuntimeError& e) {
-        std::cout << e.what() << std::endl;
+    } catch (curlpp::LogicError& e) {
+        std::cout << "[ERROR] CURLPP::LogicError" << e.what() << std::endl;
+    } catch (curlpp::RuntimeError& e) {
+        std::cout << "[ERROR] CURLPP::RuntimeError" << e.what() << std::endl;
     }
 
     return json::parse(std::string(response.str()));
@@ -48,7 +46,7 @@ json POST(json body) {
         std::list<std::string> header;
         header.push_back("Content-Type: application/json");
 
-        request.setOpt(curlpp::options::HttpHeader(header));
+        request.setOpt(new curlpp::options::HttpHeader(header));
         request.setOpt(new curlpp::options::WriteStream(&response));
         request.setOpt(new curlpp::options::Url(RPC_URL));
         request.setOpt(new curlpp::options::PostFields(jsonBody));
@@ -56,15 +54,16 @@ json POST(json body) {
 
         request.perform();
     } catch (curlpp::LogicError& e) {
-        std::cout << e.what() << std::endl;
+        std::cout << "[ERROR] CURLPP::LogicError" << e.what() << std::endl;
     } catch (curlpp::RuntimeError& e) {
-        std::cout << e.what() << std::endl;
+        std::cout << "[ERROR] CURLPP::RuntimeError" << e.what() << std::endl;
     }
 
-    return json::parse(std::string(response.str()));
+    std::string response_str = response.str();
+    return json::parse(response_str);
 }
 
-json NodeRPC::GetAccountInfo(std::string account) {
+json NodeRPC::GetAccountInfo(const std::string &account) {
     return POST({
         { "action", "account_info" },
         { "account", account },
@@ -74,10 +73,11 @@ json NodeRPC::GetAccountInfo(std::string account) {
     });
 }
 
-json NodeRPC::GetAccountHistory(std::string account) {
+json NodeRPC::GetAccountHistory(const std::string &account) {
     return POST({
         { "action", "account_history" },
         { "account", account },
+        { "raw", "true" },
         { "count", 20 }
     });
 }

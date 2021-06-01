@@ -21,7 +21,7 @@
 #include <boost/uuid/uuid_generators.hpp>
 #include <boost/uuid/uuid_io.hpp>
 
-std::string base32_characters = "13456789abcdefghijkmnopqrstuwxyz";
+const char base32_characters[33] = "13456789abcdefghijkmnopqrstuwxyz";
 
 nano::amount decode_raw_str(std::string const& text) {
     nano::amount result(0);
@@ -79,23 +79,23 @@ std::vector<byte> generateIV() {
     return std::vector<byte>(iv.begin(), iv.end());
 }
 
-std::vector<byte> deriveSecretKey(const std::string& seed, uint32_t index) {
+std::vector<byte> deriveSecretKey(const std::string& seed, uint32_t index_a) {
     std::vector<byte> bytes = HexToBytes(seed);
     std::vector<byte> digest;
 
+    nano::uint256_union index(index_a);
+
     BLAKE2b hash((unsigned int) 32);
 
-    auto index_ptr = (const byte*) &index;
-    auto bytes_ptr = (const byte*) bytes.data();
-
-    hash.Update(bytes_ptr, bytes.size());
-    hash.Update(index_ptr, sizeof(uint32_t));
+    hash.Update((const byte*) bytes.data(), bytes.size());
+    hash.Update(reinterpret_cast<uint8_t*> (&index.dwords[7]), sizeof(uint32_t));
 
     digest.resize(hash.DigestSize());
 
     hash.Final((byte*) &digest[0]);
 
-    HexEncoder encoder(new FileSink(std::cout));
+    std::string sink;
+    HexEncoder encoder(new StringSink(sink));
     VectorSource digesting(digest, true, new Redirector(encoder));
 
     return digest;
@@ -134,7 +134,8 @@ std::string derivePublicAddressFromSecret(std::vector<byte> accountSecretKey) {
     ed25519_publickey(accountSecretKey.data(), pubkey);
 
     // create checksum
-    HexEncoder encoder(new FileSink(std::cout));
+    std::string sink;
+    HexEncoder encoder(new StringSink(sink));
     std::vector<byte> checksum;
 
     BLAKE2b hash((unsigned int) 5);

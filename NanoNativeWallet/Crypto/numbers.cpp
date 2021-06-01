@@ -1,5 +1,41 @@
 #include "numbers.h"
 
+/*
+	copy paste from nano-node's source code lol
+*/
+uint256_t nano::uint256_union::number () const
+{
+	uint256_t result;
+	boost::multiprecision::import_bits (result, bytes.begin (), bytes.end ());
+	return result;
+}
+
+nano::uint256_union::uint256_union (uint256_t const & number_a)
+{
+	bytes.fill (0);
+	boost::multiprecision::export_bits (number_a, bytes.rbegin (), 8, false);
+}
+
+nano::uint256_union::uint256_union (uint64_t value0)
+{
+	*this = uint256_t (value0);
+}
+
+void nano::uint256_union::encode_hex (std::string & text) const
+{
+	std::stringstream stream;
+	stream << std::hex << std::uppercase << std::noshowbase << std::setw (64) << std::setfill ('0');
+	stream << number ();
+	text = stream.str ();
+}
+
+std::string nano::uint256_union::to_string () const
+{
+	std::string result;
+	encode_hex (result);
+	return result;
+}
+
 nano::uint128_union::uint128_union (std::string const & string_a)
 {
 	auto error (decode_hex (string_a));

@@ -6,6 +6,6 @@
 namespace NodeRPC {
 	using nlohmann::json;
 
-	json GetAccountInfo(std::string account);
-	json GetAccountHistory(std::string account);
+	json GetAccountInfo(const std::string &account);
+	json GetAccountHistory(const std::string &account);
 }

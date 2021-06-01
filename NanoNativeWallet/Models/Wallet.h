@@ -13,7 +13,10 @@ public:
     std::vector<byte> iv;
     std::string seed;
 
+    std::string ui_name;
+
     bool isEncrypted;
+
     std::vector<Account> accounts;
 
     Wallet(std::string walletUuid, std::string walletName, std::vector<byte> walletEncryptedSeed, std::vector<byte> IV);

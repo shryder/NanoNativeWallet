@@ -25,16 +25,6 @@ void clear(char* arr, size_t length) {
     memset(arr, 0, sizeof(char) * length);
 }
 
-void TextCenter(std::string text) {
-    float font_size = ImGui::GetFontSize() * text.size() / 2;
-    ImGui::SameLine(
-        ImGui::GetWindowSize().x / 2 -
-        font_size + (font_size / 2)
-    );
-
-    ImGui::Text(text.c_str());
-}
-
 Wallet& getSelectedWallet() {
     return gWallets.at(selectedWallet);
 }
@@ -42,7 +32,6 @@ Wallet& getSelectedWallet() {
 Account& getAccount(size_t i) {
     return getSelectedWallet().accounts.at(i);
 }
-
 
 void addWallet(Wallet wallet) {
     gWallets.push_back(wallet);
@@ -149,6 +138,111 @@ void SettingsTab() {
     }
 }
 
+void ShowPerformanceOverlay () {
+    const float DISTANCE = 10.0f;
+    int corner = 3;
+    ImGuiIO& io = ImGui::GetIO();
+    ImGuiWindowFlags window_flags = ImGuiWindowFlags_NoDecoration | ImGuiWindowFlags_AlwaysAutoResize | ImGuiWindowFlags_NoSavedSettings | ImGuiWindowFlags_NoFocusOnAppearing | ImGuiWindowFlags_NoNav;
+    if (corner != -1)
+    {
+        window_flags |= ImGuiWindowFlags_NoMove;
+        ImVec2 window_pos = ImVec2((corner & 1) ? io.DisplaySize.x - DISTANCE : DISTANCE, (corner & 2) ? io.DisplaySize.y - DISTANCE : DISTANCE);
+        ImVec2 window_pos_pivot = ImVec2((corner & 1) ? 1.0f : 0.0f, (corner & 2) ? 1.0f : 0.0f);
+        ImGui::SetNextWindowPos(window_pos, ImGuiCond_Always, window_pos_pivot);
+    }
+
+    ImGui::SetNextWindowBgAlpha(0.35f); // Transparent background
+    if (ImGui::Begin("Performance", NULL, window_flags)) {
+        ImGui::Text("Test Overlay");
+    }
+    ImGui::End();
+}
+
+void AccountInfo () {
+    Account &account = getAccount(selectedAccount);
+    
+    ImGui::Text(account.address.c_str());
+
+    if (!account.isAccountLoaded) {
+        ImGui::Text("Loading...");
+        return;
+    }
+
+    if (ImGui::Button("Copy Address")) {
+        ImGui::SetClipboardText(account.address.c_str());
+    }
+
+    ImGui::SameLine();
+
+    if (ImGui::Button ("Reload Data")) {
+        account.UpdateAccountInfo();
+    }
+
+    ImGui::Text("Account #%d", account.index);
+    ImGui::Text("Balance: %s NANO", account.balance_formatted.c_str());
+    ImGui::Text("Unclaimed: %s NANO", account.unclaimed_formatted.c_str());
+    ImGui::Text("Recent Transactions:");
+
+    if (account.isAccountOpen) {
+        ImGui::Columns(4, "RecentTransactions");
+
+        ImGui::Separator();
+
+        ImGui::Text("Type"); ImGui::NextColumn();
+        ImGui::Text("Account"); ImGui::NextColumn();
+        ImGui::Text("Amount"); ImGui::NextColumn();
+        ImGui::Text("Hash"); ImGui::NextColumn();
+
+        // A hack because ImGui's columns api is broke rn
+        static bool resizedColumns = false;
+        if (!resizedColumns) {
+            ImGui::SetColumnWidth(0, 65);
+            ImGui::SetColumnWidth(1, 200);
+            ImGui::SetColumnWidth(2, 95);
+            resizedColumns = true;
+        }
+
+        ImGui::Separator();
+
+        static int selected = -1;
+
+        auto account = &getAccount(selectedAccount);
+        auto account_history = &account->account_history;
+
+        for (int i = 0; i < account_history->size(); i++) {
+            auto transaction = &account_history->at(i);
+
+            // TODO: fix this, allocates a string every frame
+            std::string label(transaction->type + "##" + std::to_string(i));
+            if (ImGui::Selectable(label.c_str(), selected == i, ImGuiSelectableFlags_SpanAllColumns))
+                selected = i;
+
+            bool hovered = ImGui::IsItemHovered();
+
+            if (transaction->type == "change") {
+                ImGui::NextColumn();
+                ImGui::Text(transaction->representative.c_str());
+                ImGui::NextColumn();
+                ImGui::Text("N/A");
+                ImGui::NextColumn();
+            } else {
+                ImGui::NextColumn();
+                ImGui::Text(transaction->account.c_str());
+                ImGui::NextColumn();
+                ImGui::Text(transaction->amount.c_str());
+                ImGui::NextColumn();
+            }
+
+            ImGui::Text(transaction->hash.c_str());
+            ImGui::NextColumn();
+        }
+
+        ImGui::Columns(1);
+    } else {
+        ImGui::Text("Account is not open");
+    }
+}
+
 void WalletPage() {
     ImGui::BeginGroup();
     ImGui::BeginChild("WalletPage", ImVec2(0, 0));
@@ -192,13 +286,12 @@ void WalletPage() {
                     ImGui::Spacing();
 
                     for (std::vector<Account>::size_type i = 0; i < getSelectedWallet().accounts.size(); i++) {
-                        Account account = getAccount(i);
+                        Account &account = getAccount(i);
 
                         if (!account.hidden) {
-                            std::string balance = account.getNANOBalance();
-                            std::string row_text = account.address + " - #" + std::to_string(account.index) + "\n" + balance + " NANO" + "##" + std::to_string(account.index);
+                            auto row_text = account.ui_name.c_str();
 
-                            if (filter.PassFilter(row_text.c_str()) && ImGui::Selectable(row_text.c_str(), selectedAccount == i)) {
+                            if (filter.PassFilter(row_text) && ImGui::Selectable(row_text, selectedAccount == i)) {
                                 selectedAccount = i;
                             }
                         }
@@ -212,69 +305,9 @@ void WalletPage() {
                 {
                     ImGui::BeginChild("AccountInfo", ImVec2(550, 0), true);
 
-                    auto account = getAccount(selectedAccount);
-
-                    if (ImGui::Button("Copy Address")) {
-                        ImGui::SetClipboardText(account.address.c_str());
-                    }
-
-                    ImGui::Text("Account #%d", account.index);
-                    ImGui::Text("Balance: %lf NANO", account.getNANOBalance());
-                    ImGui::Text("Recent Transactions:");
-
-                    if (account.isAccountOpen) {
-                        std::string column_id = "RecentTransactions";
-                        column_id += "##" + std::to_string(account.index);
-
-                        ImGui::Columns(4, column_id.c_str());
-                        
-                        ImGui::Separator();
-
-                        ImGui::Text("Type"); ImGui::NextColumn();
-                        ImGui::Text("Account"); ImGui::NextColumn();
-                        ImGui::Text("Amount"); ImGui::NextColumn();
-                        ImGui::Text("Hash"); ImGui::NextColumn();
-
-                        // A hack because ImGui's columns api is broke rn
-                        static bool resizedColumns = false;
-                        if (!resizedColumns) {
-                            ImGui::SetColumnWidth(0, 65);
-                            ImGui::SetColumnWidth(1, 200);
-                            ImGui::SetColumnWidth(2, 95);
-                            resizedColumns = true;
-                        }
-
-                        ImGui::Separator();
-
-                        static int selected = -1;
-
-                        for (int i = 0; i < getAccount(selectedAccount).account_history.size(); i++) {
-                            auto transaction = getAccount(selectedAccount).account_history.at(i);
-
-                            std::string account = transaction["account"];
-                            std::string hash = transaction["hash"];
-                            std::string type = transaction["type"];
-                            
-                            auto amount = decode_raw_str(transaction["amount"]).format_balance(raw_ratio, 6, true);
-                            
-                            std::string label(type + "##" + std::to_string(i));
-                            if (ImGui::Selectable(label.c_str(), selected == i, ImGuiSelectableFlags_SpanAllColumns))
-                                selected = i;
-
-                            bool hovered = ImGui::IsItemHovered();
-
-                            ImGui::NextColumn();
-                            ImGui::Text(account.c_str());
-                            ImGui::NextColumn();
-                            ImGui::Text(amount.c_str());
-                            ImGui::NextColumn();
-                            ImGui::Text(hash.c_str());
-                            ImGui::NextColumn();
-                        }
-
-                        ImGui::Columns(1);
-                    } else {
-                        ImGui::Text("Account is not open");
+                    // Make sure atleast one account is loaded
+                    if (getSelectedWallet ().accounts.size () > 0) {
+                        AccountInfo();
                     }
 
                     ImGui::EndChild();
@@ -299,9 +332,16 @@ void WalletPage() {
 }
 
 void MainView() {
+    ImGuiIO& io = ImGui::GetIO();
+    io.ConfigFlags |= ImGuiConfigFlags_NavEnableKeyboard;
+    ImGui::SetNextWindowPos({ 0, 0 });
+    ImGui::SetNextWindowSize({ io.DisplaySize.x, io.DisplaySize.y });
+
     ImGui::Begin("MainView", NULL, MAIN_WINDOW_STYLE | ImGuiWindowFlags_MenuBar);
 
     if (ImGui::BeginMenuBar()) {
+        ImGui::Text("%d wallets loaded", gWallets.size());
+
         if (ImGui::BeginMenu("Settings")) {
             if (ImGui::MenuItem("Add Wallet", "Ctrl+N")) {
                 showCreateWalletPage = true;
@@ -315,14 +355,10 @@ void MainView() {
 
     // SideBar 
     {
-        TextCenter(std::to_string(gWallets.size()) + " wallets");
-
         ImGui::BeginChild("SideBar", ImVec2(200, 0), true);
 
         for (std::vector<Wallet>::size_type i = 0; i != gWallets.size(); i++) {
-            std::string full_name = gWallets[i].name + "##wallet" + std::to_string(i);
-
-            if (ImGui::Selectable((char*)full_name.c_str(), selectedWallet == i && !showCreateWalletPage)) {
+            if (ImGui::Selectable(gWallets[i].ui_name.c_str(), selectedWallet == i && !showCreateWalletPage)) {
                 selectedAccount = 0;
                 switchToWallet(i);
             }
@@ -351,12 +387,6 @@ void MainView() {
 }
 
 void DrawUI() {
-    ImGuiIO& io = ImGui::GetIO();
-    io.ConfigFlags |= ImGuiConfigFlags_NavEnableKeyboard;
-
-    ImGui::SetNextWindowPos({ 0, 0 });
-    ImGui::SetNextWindowSize({ io.DisplaySize.x, io.DisplaySize.y });
-
     ImGui::GetStyle().WindowRounding = 0.0f;
     ImGui::GetStyle().FrameRounding = 0.0f;
 
@@ -370,4 +400,6 @@ void DrawUI() {
     } else {
         ImGui::ShowDemoWindow();
     }
+
+    ShowPerformanceOverlay();
 }

@@ -1,7 +1,9 @@
 #include "Wallet.h"
 #include "Account.h"
 
+#include <future>
 #include <vector>
+#include <mutex>
 
 #include "../Crypto/crypto_utils.h"
 
@@ -12,6 +14,8 @@ Wallet::Wallet(std::string walletUuid, std::string walletName, std::vector<byte>
     iv = IV;
 
     isEncrypted = true;
+    
+    ui_name = name + "##" + walletUuid;
 }
 
 Wallet::Wallet(std::string walletUuid, std::string walletName, std::vector<byte> walletEncryptedSeed, std::vector<byte> IV, std::string walletSeed) {
@@ -21,20 +25,35 @@ Wallet::Wallet(std::string walletUuid, std::string walletName, std::vector<byte>
     seed = walletSeed;
     iv = IV;
 
+    ui_name = name + "##" + walletUuid;
+
     isEncrypted = false;
     loadAccounts();
 }
 
-void Wallet::addAccount(size_t i) {
+std::vector<std::future<void>> f_AccountsInfo;
+std::mutex m_AccountsLock;
+
+bool OrderByIndex (Account a, Account b) {
+    return a.index < b.index;
+}
+
+void Wallet::addAccount(size_t index) {
     // Check if account already exists
     for (Account account : accounts) {
-        if (account.index == i) return;
+        if(account.index == index) return;
     }
-       
-    auto accountSecret = deriveSecretKey(seed, i);
+
+    auto accountSecret = deriveSecretKey(seed, index);
     auto derivedPublicAddress = derivePublicAddressFromSecret(accountSecret);
 
-    accounts.push_back(Account(i, derivedPublicAddress));
+    f_AccountsInfo.push_back(std::async(std::launch::async, [accounts = &accounts, index, derivedPublicAddress] () {
+        auto account = Account(index, derivedPublicAddress);
+
+        std::lock_guard<std::mutex> lock(m_AccountsLock);
+        accounts->push_back(account);
+        std::sort(accounts->begin(), accounts->end(), OrderByIndex);
+    }));
 }
 
 void Wallet::addAccount() {
