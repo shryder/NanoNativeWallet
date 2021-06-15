@@ -21,9 +21,14 @@
 #include <nlohmann/json.hpp>
 using nlohmann::json;
 
+const json DEFAULT_DATABASE = { 
+    { "NODE_RPC", "https://node.shrynode.me/api" },
+    { "wallets", json::array() }
+};
+
 json getLocalDatabase() {
     if (!std::filesystem::exists(DB_FILE_NAME)) {
-        return { { "wallets", json::array() } };
+        return DEFAULT_DATABASE;
     }
 
     std::ifstream i(DB_FILE_NAME);
@@ -35,9 +40,7 @@ json getLocalDatabase() {
 
 void saveDatabase() {
     std::ofstream o(DB_FILE_NAME);
-    json j = {
-        { "wallets", json::array() }
-    };
+    json j = DEFAULT_DATABASE;
 
     for (std::vector<Wallet>::size_type i = 0; i != gWallets.size(); i++) {
         auto name = gWallets[i].name;

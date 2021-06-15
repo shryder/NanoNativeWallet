@@ -13,8 +13,6 @@
 
 using nlohmann::json;
 
-#define RPC_URL "https://node.shrynode.me/api"
-
 json GET(const std::string &url) {
     std::ostringstream response;
 
@@ -48,7 +46,7 @@ json POST(json body) {
 
         request.setOpt(new curlpp::options::HttpHeader(header));
         request.setOpt(new curlpp::options::WriteStream(&response));
-        request.setOpt(new curlpp::options::Url(RPC_URL));
+        request.setOpt(new curlpp::options::Url(gNodeRPC));
         request.setOpt(new curlpp::options::PostFields(jsonBody));
         request.setOpt(new curlpp::options::PostFieldSize(jsonBody.size()));
 
@@ -67,6 +65,7 @@ json NodeRPC::GetAccountInfo(const std::string &account) {
     return POST({
         { "action", "account_info" },
         { "account", account },
+
         { "representative", true },
         { "weight", true },
         { "pending", true }
@@ -77,7 +76,21 @@ json NodeRPC::GetAccountHistory(const std::string &account) {
     return POST({
         { "action", "account_history" },
         { "account", account },
-        { "raw", "true" },
+
+        { "raw", true },
+
+        { "count", 20 }
+    });
+}
+
+json NodeRPC::GetUnclaimedTransactions (const std::string& account) {
+    return POST ({
+        { "action", "pending" },
+        { "account", account },
+
+        { "source", true },
+        { "include_only_confirmed", true },
+
         { "count", 20 }
     });
 }

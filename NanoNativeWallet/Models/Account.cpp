@@ -34,6 +34,15 @@ void Account::UpdateAccountInfo() {
 
         representative = accountInfo["representative"];
 
+        if (accountInfo["pending"] != "0") {
+            auto unclaimedTransactionsJSON = NodeRPC::GetUnclaimedTransactions(address)["blocks"];
+
+            for (nlohmann::json::iterator it = unclaimedTransactionsJSON.begin(); it != unclaimedTransactionsJSON.end(); ++it) {
+                UnclaimedTransaction block = { it.key(), decode_raw_str(it.value()["amount"]), it.value()["source"] };
+                unclaimed_transactions.push_back(block);
+            }
+        }
+
         auto accountHistoryJSON = NodeRPC::GetAccountHistory(address)["history"];
 
         account_history.clear();
@@ -50,12 +59,12 @@ void Account::UpdateAccountInfo() {
 
 void Account::SetPending (const nano::amount &newPending) {
     unclaimed = newPending;
-    unclaimed_formatted = unclaimed.format_balance(raw_ratio, 6, true);
+    unclaimed_formatted = unclaimed.pretty_format();
 }
 
 void Account::SetBalance(const nano::amount &newBalance) {
     balance = newBalance;
-    balance_formatted = balance.format_balance(raw_ratio, 6, true);
+    balance_formatted = balance.pretty_format();
 
     UpdateUIName();
 }

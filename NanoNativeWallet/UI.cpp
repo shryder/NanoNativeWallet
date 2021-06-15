@@ -71,7 +71,9 @@ void ImportWalletPage() {
         std::string encryptedSeed = encryptAES(std::string(loginPopupSeed), std::string(loginPopupPassword), generatedIV);
         std::string uuid = generateUUID();
 
-        addWallet(Wallet(uuid, std::string(loginPopupWalletAlias), std::vector<byte>(encryptedSeed.begin(), encryptedSeed.end()), generatedIV, std::string(loginPopupSeed)));
+        auto wallet = Wallet(uuid, std::string(loginPopupWalletAlias), std::vector<byte>(encryptedSeed.begin(), encryptedSeed.end()), generatedIV, std::string(loginPopupSeed));
+        addWallet(wallet);
+
         switchToWallet(gWallets.size() - 1);
 
         clear(loginPopupSeed, SEED_SIZE + 1);
@@ -87,7 +89,79 @@ void ImportWalletPage() {
 void deleteCurrentWallet(){
     deleteWalletFromDisk(getSelectedWallet().uuid);
     gWallets.erase(gWallets.begin() + selectedWallet);
+    selectedWallet = 0;
     saveDatabase();
+}
+
+void SendTab () {
+    auto accounts = &getSelectedWallet().accounts;
+
+    static int dropdown_selected_address_idx = 0;
+
+    auto address_str = &accounts->at(dropdown_selected_address_idx).address;
+    
+    ImGui::Text("From");
+
+    if (ImGui::BeginCombo("##SendFunds_SourceAddress", address_str->c_str(), ImGuiComboFlags_PopupAlignLeft)) {
+        for (int n = 0; n < accounts->size(); n++) {
+            const bool is_selected = (dropdown_selected_address_idx == n);
+            
+            if (ImGui::Selectable(accounts->at(n).address.c_str(), is_selected))
+                dropdown_selected_address_idx = n;
+
+            if (is_selected){
+                ImGui::SetItemDefaultFocus();
+            }
+        }
+        ImGui::EndCombo();
+    }
+
+    ImGui::Text("To");
+
+    static char destination_address[65]; // nano_ addresses are 65 characters size
+    ImGui::InputText("##SendFunds_DestinationAddress", destination_address, 65);
+
+    ImGui::Text("Amount");
+    
+    static double send_amount = 0.01;
+    ImGui::InputDouble("##SendFunds_Amount", &send_amount);
+
+    if (ImGui::Button ("Send")) {
+
+    }
+}
+
+void ReceiveTab () {
+    ImGui::Columns(4, "UnclaimedTransactions", false);
+
+    ImGui::Separator();
+
+    ImGui::Text("Amount"); ImGui::NextColumn();
+    ImGui::Text("Source"); ImGui::NextColumn();
+    ImGui::Text("Hash"); ImGui::NextColumn();
+    ImGui::NextColumn(); // leave last header column empty
+
+    ImGui::Separator();
+
+    auto account = &getAccount(selectedAccount);
+    auto unclaimed_transactions = &account->unclaimed_transactions;
+
+    for (int i = 0; i < unclaimed_transactions->size(); i++) {
+        auto transaction = &unclaimed_transactions->at(i);
+
+        ImGui::Text(transaction->amount.pretty_format().c_str());
+        ImGui::NextColumn();
+        ImGui::Text(transaction->source.c_str());
+        ImGui::NextColumn();
+        ImGui::Text(transaction->hash.c_str());
+        ImGui::NextColumn();
+
+        if (ImGui::Button ("Claim")) {
+
+        }
+    }
+
+    ImGui::Columns(1);
 }
 
 void SettingsTab() {
@@ -130,11 +204,30 @@ void SettingsTab() {
     }
 
     if (ImGui::Button("Delete Wallet")) {
-        deleteCurrentWallet();
+        ImGui::OpenPopup("DeleteWallet?");
     }
 
     if (ImGui::Button("Copy Seed")) {
         ImGui::SetClipboardText(getSelectedWallet().seed.c_str());
+    }
+
+    if (ImGui::BeginPopupModal("DeleteWallet?", NULL, ImGuiWindowFlags_AlwaysAutoResize)) {
+        ImGui::Text("Are you sure you want to delete this wallet?\nThis operation cannot be undone!\n\n");
+        ImGui::Separator();
+
+        if (ImGui::Button("OK", ImVec2(120, 0))) {
+            deleteCurrentWallet();
+
+            ImGui::CloseCurrentPopup();
+        }
+        
+        ImGui::SameLine();
+
+        if (ImGui::Button ("Cancel", ImVec2(120, 0))) {
+            ImGui::CloseCurrentPopup();
+        }
+
+        ImGui::EndPopup();
     }
 }
 
@@ -273,57 +366,73 @@ void WalletPage() {
 
         ImGui::Separator();
 
-        if (ImGui::BeginTabBar("##WalletPageTabs", ImGuiTabBarFlags_None)) {
-            if (ImGui::BeginTabItem("Accounts")) {
-                ImGui::BeginGroup();
-                // Accounts List
-                {
-                    ImGui::BeginChild("AccountsList", ImVec2(600, 0), true);
+        if (getSelectedWallet ().accounts.size () > 0) {
+            if (ImGui::BeginTabBar("##WalletPageTabs", ImGuiTabBarFlags_None)) {
+                if (ImGui::BeginTabItem("Accounts")) {
+                    ImGui::BeginGroup();
+                    // Accounts List
+                    {
+                        ImGui::BeginChild("AccountsList", ImVec2(600, 0), true);
 
-                    static ImGuiTextFilter filter;
-                    filter.Draw("##AccountsListFilterAddresses", 800);
+                        static ImGuiTextFilter filter;
+                        filter.Draw("##AccountsListFilterAddresses", 800);
 
-                    ImGui::Spacing();
+                        ImGui::Spacing();
 
-                    for (std::vector<Account>::size_type i = 0; i < getSelectedWallet().accounts.size(); i++) {
-                        Account &account = getAccount(i);
+                        for (std::vector<Account>::size_type i = 0; i < getSelectedWallet().accounts.size(); i++) {
+                            Account &account = getAccount(i);
 
-                        if (!account.hidden) {
-                            auto row_text = account.ui_name.c_str();
+                            if (!account.hidden) {
+                                auto row_text = account.ui_name.c_str();
 
-                            if (filter.PassFilter(row_text) && ImGui::Selectable(row_text, selectedAccount == i)) {
-                                selectedAccount = i;
+                                if (filter.PassFilter(row_text) && ImGui::Selectable(row_text, selectedAccount == i)) {
+                                    selectedAccount = i;
+                                }
                             }
                         }
+
+                        ImGui::EndChild();
                     }
 
-                    ImGui::EndChild();
-                }
+                    ImGui::SameLine();
 
-                ImGui::SameLine();
+                    {
+                        ImGui::BeginChild("AccountInfo", ImVec2(550, 0), true);
 
-                {
-                    ImGui::BeginChild("AccountInfo", ImVec2(550, 0), true);
+                        // Make sure atleast one account is loaded
+                        if (getSelectedWallet ().accounts.size () > 0) {
+                            AccountInfo();
+                        }
 
-                    // Make sure atleast one account is loaded
-                    if (getSelectedWallet ().accounts.size () > 0) {
-                        AccountInfo();
+                        ImGui::EndChild();
                     }
 
-                    ImGui::EndChild();
+                    ImGui::EndTabItem();
+                    ImGui::EndGroup();
                 }
 
-                ImGui::EndTabItem();
-                ImGui::EndGroup();
+                if (ImGui::BeginTabItem ("Send")) {
+                    SendTab();
+
+                    ImGui::EndTabItem();
+                }
+
+                if (ImGui::BeginTabItem ("Receive")) {
+                    ReceiveTab();
+
+                    ImGui::EndTabItem();
+                }
+
+                if (ImGui::BeginTabItem("Wallet Settings")) {
+                    SettingsTab();
+
+                    ImGui::EndTabItem();
+                }
+
+                ImGui::EndTabBar();
             }
-
-            if (ImGui::BeginTabItem("Wallet Settings")) {
-                SettingsTab();
-
-                ImGui::EndTabItem();
-            }
-
-            ImGui::EndTabBar();
+        } else {
+            ImGui::Text("Loading...");
         }
     }
 
@@ -333,14 +442,14 @@ void WalletPage() {
 
 void MainView() {
     ImGuiIO& io = ImGui::GetIO();
-    io.ConfigFlags |= ImGuiConfigFlags_NavEnableKeyboard;
+
     ImGui::SetNextWindowPos({ 0, 0 });
     ImGui::SetNextWindowSize({ io.DisplaySize.x, io.DisplaySize.y });
 
     ImGui::Begin("MainView", NULL, MAIN_WINDOW_STYLE | ImGuiWindowFlags_MenuBar);
 
     if (ImGui::BeginMenuBar()) {
-        ImGui::Text("%d wallets loaded", gWallets.size());
+        // ImGui::Text("%d wallets loaded", gWallets.size());
 
         if (ImGui::BeginMenu("Settings")) {
             if (ImGui::MenuItem("Add Wallet", "Ctrl+N")) {
@@ -401,5 +510,5 @@ void DrawUI() {
         ImGui::ShowDemoWindow();
     }
 
-    ShowPerformanceOverlay();
+    // ShowPerformanceOverlay();
 }

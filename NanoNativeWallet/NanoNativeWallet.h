@@ -10,3 +10,5 @@ using byte = CryptoPP::byte;
 
 #define IV_SIZE 16
 #define SEED_SIZE 64
+
+extern std::string gNodeRPC;

@@ -11,8 +11,9 @@ Wallet::Wallet(std::string walletUuid, std::string walletName, std::vector<byte>
     uuid = walletUuid;
     name = walletName;
     encryptedSeed = walletEncryptedSeed;
-    iv = IV;
 
+    iv = IV;
+    accounts = { };
     isEncrypted = true;
     
     ui_name = name + "##" + walletUuid;
@@ -22,12 +23,15 @@ Wallet::Wallet(std::string walletUuid, std::string walletName, std::vector<byte>
     uuid = walletUuid;
     name = walletName;
     encryptedSeed = walletEncryptedSeed;
-    seed = walletSeed;
-    iv = IV;
 
+    iv = IV;
+    accounts = { };
+    isEncrypted = false;
+    
     ui_name = name + "##" + walletUuid;
 
-    isEncrypted = false;
+    seed = walletSeed;
+    
     loadAccounts();
 }
 
@@ -82,6 +86,7 @@ void Wallet::loadAccounts() {
 
 void Wallet::setName(char* newName) {
     name = std::string(newName);
+    ui_name = name + "##" + uuid;
 }
 
 void Wallet::updatePassword(char* newPassword) {

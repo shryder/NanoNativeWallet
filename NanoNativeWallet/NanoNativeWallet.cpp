@@ -13,9 +13,12 @@
 
 using nlohmann::json;
 
+std::string gNodeRPC;
+
 void loadDatabase() {
     json database = getLocalDatabase();
 
+    gNodeRPC = database["NODE_RPC"];
     for (const auto& wallet: database["wallets"].items()) {
         auto name = wallet.value()["name"];
         auto uuid = wallet.value()["uuid"];

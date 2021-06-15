@@ -4,6 +4,7 @@
 #include "../Crypto/crypto_utils.h"
 #include "../Crypto/numbers.h"
 #include "Transaction.h"
+#include "UnclaimedTransaction.h"
 
 class Account {
 public:
@@ -12,8 +13,8 @@ public:
 
 	// Just so we don't do it every frame
 	std::string ui_name;
-	std::string balance_formatted;
-	std::string unclaimed_formatted;
+	std::string balance_formatted = "0";
+	std::string unclaimed_formatted = "0";
 
 	nano::amount balance = 0;
 	nano::amount unclaimed = 0;
@@ -23,6 +24,7 @@ public:
 	size_t index;
 
 	std::vector<Transaction> account_history;
+	std::vector<UnclaimedTransaction> unclaimed_transactions;
 
 	bool hidden = false; // Maybe this shouldn't be here but w/e for now
 	bool isAccountOpen = false;

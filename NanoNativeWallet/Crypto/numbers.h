@@ -32,6 +32,7 @@ namespace nano {
             bool decode_dec (std::string const &, uint128_t);
             std::string format_balance (uint128_t scale, int precision, bool group_digits) const;
             std::string format_balance (uint128_t scale, int precision, bool group_digits, const std::locale & locale) const;
+            std::string pretty_format();
 
             uint128_t number () const;
             void clear ();

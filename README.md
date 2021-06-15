@@ -1,4 +1,4 @@
-# A Lightweight Nano Wallet for Desktop
+# [WIP] A Lightweight Nano Wallet for Desktop
 
 ![Screenshot](https://i.imgur.com/V2z6grV.png)
 

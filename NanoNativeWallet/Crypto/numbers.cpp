@@ -365,6 +365,10 @@ std::string nano::uint128_union::format_balance (uint128_t scale, int precision,
 	return ::format_balance (number (), scale, precision, group_digits, thousands_sep, decimal_point, grouping);
 }
 
+std::string nano::uint128_union::pretty_format () {
+	return format_balance (raw_ratio, 6, true);
+}
+
 void nano::uint128_union::clear ()
 {
 	qwords.fill (0);

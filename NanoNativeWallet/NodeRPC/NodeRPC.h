@@ -8,4 +8,5 @@ namespace NodeRPC {
 
 	json GetAccountInfo(const std::string &account);
 	json GetAccountHistory(const std::string &account);
+	json GetUnclaimedTransactions(const std::string& account);
 }
